@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Stock from "./components/Stock"
 import Search from "./components/Search"
 import Followed from "./components/Followed"
@@ -11,15 +11,45 @@ import { Menu } from '@material-ui/icons'
 import Logo from './logo.png'
 import { useInterval, getIntradayCryptoData } from './utils';
 import { idb } from "./idb"
+import { postSubscribe } from './api'
 import Alerts from './components/Alerts';
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+
+  useEffect(() => {
+    async function getAlerts() {
+      if (!navigator.onLine) {
+        console.log("offline")
+        return
+      }
+      if (!("serviceWorker" in navigator && "PushManager" in window)) {
+        console.log("no SW or PM")
+        return
+      }
+      console.log("test")
+      const sw = await navigator.serviceWorker.ready;
+      const sub = await sw.pushManager.getSubscription();
+      if(sub === null){
+        const newsub = await sw.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: 'BHT6CRkl2uFMHDUBDPVdQUBe24nkrvmG4AYTeUW3-aYEHAVpMvWvAKINb54lnCzXx362FfWlfG-g3Zt9Tuhlhik'
+        });
+        console.log(newsub)
+        const res = await postSubscribe(newsub);
+        console.log(res)
+      }
+    }
+    getAlerts()
+  }, [])
+
+  /*
   async function getAlerts() {
     if (! navigator.onLine){
       return
     }
+    
     let val = await (await idb.db).getAll("alerts")
     console.log(val)
     for (const a in val) {
@@ -46,11 +76,13 @@ function App() {
         }
       }
     }
+    
   }
 
   useInterval(() => {
     getAlerts();
   }, 1000 * 10);
+  */
 
   function ListItemLink(props) {
     return <ListItem button component="a" {...props} />;
@@ -84,7 +116,7 @@ function App() {
           <CardContent style={{ backgroundColor: "pink" }}>
             <Typography variant="h5" component="span">
               Brak połączenia z internetem
-          </Typography>
+            </Typography>
           </CardContent>
         </Card>
       }

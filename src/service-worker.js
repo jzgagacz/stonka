@@ -12,6 +12,7 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { StaleWhileRevalidate } from 'workbox-strategies';
+import Logo from './logo.png'
 
 clientsClaim();
 
@@ -70,3 +71,14 @@ self.addEventListener('message', (event) => {
 });
 
 // Any other custom service worker logic can go here.
+
+self.addEventListener("push", e => {
+  const data = e.data.json();
+  self.registration.showNotification(
+      data.title,
+      {
+          body: data.body,
+          icon: Logo 
+      }
+  );
+});
