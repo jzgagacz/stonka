@@ -4,6 +4,8 @@ import { Dialog, DialogTitle, DialogContent, DialogContentText, InputLabel, Sele
 import { useParams } from 'react-router';
 import { idb } from "../idb"
 import { useInterval, getIntradayCryptoData } from '../utils';
+import { postAlert } from '../api';
+import { useAuth0 } from "@auth0/auth0-react";
 
 function CryptoId() {
     const [data, setData] = useState();
@@ -11,6 +13,7 @@ function CryptoId() {
     const [open, setOpen] = useState(false);
     const [moreless, setMoreLess] = useState("more");
     const [price, setPrice] = useState(0);
+    const { getAccessTokenSilently } = useAuth0();
     let { cryptoid } = useParams();
 
     async function handleAlert(){
@@ -18,7 +21,10 @@ function CryptoId() {
         console.log(price);
         const date = Date.now();
         console.log(date);
-        (await idb.db).put("alerts", {symbol: cryptoid, moreless: moreless, price:price, date:date}, cryptoid);
+        let alert = {crypto: cryptoid, moreless: moreless, price:price, date:date};
+        const accessToken = await getAccessTokenSilently();
+        await postAlert(alert, accessToken);
+        //(await idb.db).put("alerts", {symbol: cryptoid, moreless: moreless, price:price, date:date}, cryptoid);
         setOpen(false);
     }
 

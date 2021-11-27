@@ -27,14 +27,28 @@ export async function getIntradayCrypto(name, outputsize) {
     return res.json()
 }
 
-export async function postSubscribe(sub) {
+export async function postSubscribe(sub, accessToken) {
     const res = await fetch(`${BACKEND_URL}/api/subscribe`, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify(sub)
+    })
+    return res.json()
+}
+
+export async function postAlert(alert, accessToken) {
+    const res = await fetch(`${BACKEND_URL}/api/alert`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(alert)
     })
     return res.json()
 }
