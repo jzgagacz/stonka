@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { getSearches } from "../api"
 
 
-function Stock() {
+function Search() {
   const [searchFieldData, setSearchFieldData] = useState();
   const [data, setData] = useState([]);
 
@@ -32,4 +32,4 @@ function Stock() {
   );
 }
 
-export default Stock;
+export default Search;

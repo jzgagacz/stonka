@@ -3,13 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { idb } from "../idb"
 
 
-function Stock() {
+function Followed() {
     const [data, setData] = useState([]);
 
     useEffect(() => {
         async function fetchFollowed(){
             let val = await (await idb.db).getAll("followed")
             setData(val)
+            console.log(val)
         }
         fetchFollowed()
     }, []);
@@ -30,4 +31,4 @@ function Stock() {
     );
 }
 
-export default Stock;
+export default Followed;

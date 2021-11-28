@@ -15,6 +15,7 @@ function CryptoId() {
     const [price, setPrice] = useState(0);
     const { getAccessTokenSilently } = useAuth0();
     let { cryptoid } = useParams();
+    const chartColor = localStorage.getItem('chartColor') === null ? "#8884d8" : localStorage.getItem('chartColor')
 
     async function handleAlert(){
         console.log(moreless);
@@ -86,7 +87,7 @@ function CryptoId() {
                 <h2>{cryptoid}(USD)</h2>
                 <ResponsiveContainer width="90%" height={400}>
                     <LineChart data={data}>
-                        <Line type="linear" dataKey="value" stroke="#8884d8" dot={false} />
+                        <Line type="linear" dataKey="value" stroke={chartColor} dot={false} />
                         <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
                         <XAxis dataKey="name" />
                         <YAxis domain={['dataMin', 'dataMax']} allowDataOverflow={true} />

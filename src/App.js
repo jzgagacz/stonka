@@ -14,6 +14,7 @@ import { idb } from "./idb"
 import { postSubscribe } from './api'
 import Alerts from './components/Alerts';
 import { useAuth0 } from "@auth0/auth0-react";
+import Settings from './components/Settings';
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -74,6 +75,9 @@ function App() {
                   <ListItemLink href="/alerts">
                     <ListItemText primary="ALERTY CENOWE" />
                   </ListItemLink>
+                  <ListItemLink href="/settings">
+                    <ListItemText primary="USTAWIENIA" />
+                  </ListItemLink>
                 </List>
               </Drawer>
             </div>
@@ -122,6 +126,7 @@ function App() {
           <Route exact path="/crypto" component={CryptoList} />
           <Route path="/crypto/:cryptoid" component={CryptoId} />
           <Route path="/alerts" component={Alerts} />
+          <Route path="/settings" component={Settings} />
         </Switch>
       </Router>
     </div>

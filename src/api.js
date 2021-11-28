@@ -40,6 +40,29 @@ export async function postSubscribe(sub, accessToken) {
     return res.json()
 }
 
+export async function postAllFollowed(followed, accessToken) {
+    const res = await fetch(`${BACKEND_URL}/api/user/followed`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(followed)
+    })
+    return res.json()
+}
+
+export async function getAllFollowed(accessToken) {
+    const res = await fetch(`${BACKEND_URL}/api/user/followed`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
+    })
+    return res.json()
+}
+
 export async function postAlert(alert, accessToken) {
     const res = await fetch(`${BACKEND_URL}/api/alert`, {
         method: 'POST',
@@ -49,6 +72,29 @@ export async function postAlert(alert, accessToken) {
             'Authorization': `Bearer ${accessToken}`
         },
         body: JSON.stringify(alert)
+    })
+    return res.json()
+}
+
+export async function postAllSettings(settings, accessToken) {
+    const res = await fetch(`${BACKEND_URL}/api/user/settings`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify(settings)
+    })
+    return res.json()
+}
+
+export async function getAllSettings(accessToken) {
+    const res = await fetch(`${BACKEND_URL}/api/user/settings`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`
+        }
     })
     return res.json()
 }
