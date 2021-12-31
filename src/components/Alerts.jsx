@@ -2,9 +2,13 @@ import { List, ListItem, ListItemText, ListItemSecondaryAction, IconButton } fro
 import { Delete } from '@material-ui/icons'
 import React, { useState, useEffect } from 'react';
 import { idb } from "../idb"
+import { deleteAlert } from "../api"
+import { useAuth0 } from "@auth0/auth0-react";
 
 
 function Alerts() {
+    const { isLoading, isAuthenticated, getAccessTokenSilently } = useAuth0();
+
     const [data, setData] = useState([]);
 
     useEffect(() => {
@@ -15,8 +19,16 @@ function Alerts() {
         getAlerts()
     }, [])
 
-    async function deleteAlert(name){
-        (await idb.db).delete("alerts", name);
+    async function deleteAlertClick(id){
+        if (isLoading || !isAuthenticated){
+            return
+        }
+        const timestamp = + new Date();
+        let alert = {id: id, timestamp:timestamp};
+        const accessToken = await getAccessTokenSilently();
+        const res = await deleteAlert(alert, accessToken);
+        (await idb.db).delete("alerts", id);
+        (await idb.db).put("timestamps", timestamp, 'alerts');
         let val = await (await idb.db).getAll("alerts")
         setData(val)
     }
@@ -28,7 +40,7 @@ function Alerts() {
                     <ListItem key={idx} >
                         <ListItemText primary={e.symbol} secondary={e.moreless === "more" ? `powyżej ${e.price} USD` : `poniżej ${e.price} USD`} />
                         <ListItemSecondaryAction>
-                            <IconButton onClick={() => deleteAlert(e.symbol)}>
+                            <IconButton onClick={() => deleteAlertClick(e.id)}>
                                 <Delete/>
                             </IconButton>
                         </ListItemSecondaryAction>

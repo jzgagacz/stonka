@@ -9,7 +9,7 @@ import './App.css';
 import { Drawer, IconButton, List, Toolbar, ListItem, ListItemText, Card, CardContent, Typography, Button, Grid, Item } from '@material-ui/core';
 import { Menu } from '@material-ui/icons'
 import Logo from './logo.png'
-import { useInterval, getIntradayCryptoData } from './utils';
+import { useInterval, getIntradayCryptoData, initSettingsSync } from './utils';
 import { idb } from "./idb"
 import { postSubscribe } from './api'
 import Alerts from './components/Alerts';
@@ -22,7 +22,21 @@ function App() {
 
 
   useEffect(() => {
-    async function getAlerts() {
+    async function saveAccessToken() {
+      if (isLoading || !isAuthenticated) {
+        return
+      }
+      const tokenLastRefreshed = await (await idb.db).get('token', 'tokenLastRefreshed')
+      if (tokenLastRefreshed == null || tokenLastRefreshed < Date.now() - 3 * 60 * 60 * 1000) {
+        console.log("in")
+        const accessToken = await getAccessTokenSilently();
+        await (await idb.db).put('token', accessToken, 'accessToken');
+        const timestamp = + new Date()
+        await (await idb.db).put('token', timestamp, 'tokenLastRefreshed');
+      }
+    }
+
+    async function getSub() {
       if (!navigator.onLine) {
         console.log("offline")
         return
@@ -41,13 +55,51 @@ function App() {
           userVisibleOnly: true,
           applicationServerKey: 'BHT6CRkl2uFMHDUBDPVdQUBe24nkrvmG4AYTeUW3-aYEHAVpMvWvAKINb54lnCzXx362FfWlfG-g3Zt9Tuhlhik'
         });
-        console.log(newsub)
         const accessToken = await getAccessTokenSilently();
         const res = await postSubscribe(newsub, accessToken);
-        console.log(res)
       }
     }
-    getAlerts()
+    async function settingsSync() {
+      if (isLoading || !isAuthenticated) {
+        return
+      }
+      if (!"serviceWorker" in navigator) {
+        console.log("no SW")
+        return
+      }
+      if (!await (await idb.db).get("settings", 'syncSettings')){
+        return
+      }
+      const registration = await navigator.serviceWorker.ready;
+      if ('periodicSync' in registration) {
+        const tags = await registration.periodicSync.getTags();
+        console.log(tags)
+        if (!tags.includes('sync-settings')) {
+          const status = await navigator.permissions.query({
+            name: 'periodic-background-sync',
+          });
+          console.log(status)
+          if (status.state === 'granted') {
+            try {
+              await registration.periodicSync.register('sync-settings', {
+                minInterval: 3 * 60 * 60 * 1000,
+              });
+            } catch (e) {
+              console.log(e);
+            }
+          } else {
+            console.log('permission not granted')
+          }
+
+        }
+      } else {
+        console.log('periodic sync not supported')
+      }
+    }
+
+    saveAccessToken()
+    getSub()
+    settingsSync()
   }, [isLoading, isAuthenticated])
 
   function ListItemLink(props) {

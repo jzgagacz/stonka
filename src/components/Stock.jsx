@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import {  Button } from "@material-ui/core"
+import { Button } from "@material-ui/core"
 import { idb } from "../idb"
-import { getIntraday, getDaily, getInfo } from "../api"
+import { getIntraday, getDaily, getInfo, postFollowed, deleteFollowed } from "../api"
 import { useParams } from 'react-router';
+import { useAuth0 } from "@auth0/auth0-react";
 
 
 function Stock(props) {
+  const { isLoading, isAuthenticated, getAccessTokenSilently } = useAuth0();
+
   const [data, setData] = useState();
   const [intradayData, setIntradayData] = useState(null);
   const [dailyData, setDailyData] = useState(null);
@@ -17,7 +20,7 @@ function Stock(props) {
   useEffect(() => {
     getIntradayData(stockid).then((data) => setIntradayData(data))
     getDailyData(stockid).then((data) => setDailyData(data))
-    //getCompInfo(stockid).then((data) => setInfo(data))
+    getCompInfo(stockid).then((data) => setInfo(data))
     getFollowedState()
   }, [stockid]);  // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -38,8 +41,12 @@ function Stock(props) {
   async function getCompInfo(name) {
     let val = await (await idb.db).get("compinfo", name)
     let data = val;
-    if (val === undefined){
-      data = await getInfo(name);
+    if (val === undefined) {
+      let newdata = await getInfo(name);
+      if (newdata == null) {
+        return data
+      }
+      data = newdata;
       (await idb.db).put("compinfo", data, name);
     }
     console.log(data)
@@ -50,28 +57,32 @@ function Stock(props) {
     var spliced = Object.assign({}, newdata["Time Series (5min)"], data["Time Series (5min)"])
     newdata["Time Series (5min)"] = spliced
     return newdata
-}
+  }
 
-function splicedatadaily(data, newdata) {
-  var spliced = Object.assign({}, newdata["Time Series (Daily)"], data["Time Series (Daily)"])
-  newdata["Time Series (Daily)"] = spliced
-  return newdata
-}
+  function splicedatadaily(data, newdata) {
+    var spliced = Object.assign({}, newdata["Time Series (Daily)"], data["Time Series (Daily)"])
+    newdata["Time Series (Daily)"] = spliced
+    return newdata
+  }
 
   async function getIntradayData(name) {
     let val = await (await idb.db).get("intradaystocks", name)
     let data = val;
-    if (! navigator.onLine){
-      if (val === undefined){
+    if (!navigator.onLine) {
+      if (val === undefined) {
         return null
       }
       return val
     }
     if (val === undefined) {
-      data = await getIntraday(name, "full");
+      let newdata = await getIntraday(name, "full", 0);
+      if (newdata == null) {
+        return data
+      }
+      data = newdata;
       (await idb.db).put("intradaystocks", data, name);
       console.log("fetched intraday")
-    } else{
+    } else {
       if (val["Meta Data"] === undefined) {
         return val
       }
@@ -82,12 +93,19 @@ function splicedatadaily(data, newdata) {
       if (lastRefreshed < minDate) {
         lastDate.setHours(lastDate.getHours() - 6)
         if (lastRefreshed > lastDate) {
-          let newdata = await getIntraday(name, "compact");
+          let newdata = await getIntraday(name, "compact", lastRefreshed.getTime());
+          if (newdata == null) {
+            return data
+          }
           data = splicedataintraday(data, newdata);
           (await idb.db).put("intradaystocks", data, name);
           console.log("fetch and splice intraday")
         } else {
-          data = await getIntraday(name, "full");
+          let newdata = await getIntraday(name, "full", lastRefreshed.getTime());
+          if (newdata == null) {
+            return data
+          }
+          data = newdata;
           (await idb.db).put("intradaystocks", data, name);
           console.log("fetch all intraday")
         }
@@ -99,14 +117,18 @@ function splicedatadaily(data, newdata) {
   async function getDailyData(name) {
     let val = await (await idb.db).get("dailystocks", name)
     let data = val
-    if (! navigator.onLine){
-      if (val === undefined){
+    if (!navigator.onLine) {
+      if (val === undefined) {
         return null
       }
       return val
     }
     if (val === undefined) {
-      data = await getDaily(name, "full");
+      let newdata = await getDaily(name, "full", 0);
+      if (newdata == null) {
+        return data
+      }
+      data = newdata;
       (await idb.db).put("dailystocks", data, name);
       console.log("fetched daily")
     } else {
@@ -120,15 +142,22 @@ function splicedatadaily(data, newdata) {
       weekendDate.setDate(nowDate.getDate() - 6)
       let minDate = lastDate
       minDate.setDate(minDate.getDate() - 1)
-      if (lastRefreshed < minDate && ! (lastRefreshed.getDay() === 5 && (nowDate.getDay() === 0 || nowDate.getDay() === 6) && lastRefreshed > weekendDate) ) {
+      if (lastRefreshed < minDate && !(lastRefreshed.getDay() === 5 && (nowDate.getDay() === 0 || nowDate.getDay() === 6) && lastRefreshed > weekendDate)) {
         lastDate.setDate(lastDate.getDate() - 90)
         if (lastRefreshed > lastDate) {
-          let newdata = await getDaily(name, "compact");
+          let newdata = await getDaily(name, "compact", lastRefreshed.getTime());
+          if (newdata == null) {
+            return data
+          }
           data = splicedatadaily(data, newdata);
           (await idb.db).put("dailystocks", data, name);
           console.log("fetch and splice daily")
         } else {
-          data = await getDaily(name, "full");
+          let newdata = await getDaily(name, "full", lastRefreshed.getTime());
+          if (newdata == null) {
+            return data
+          }
+          data = newdata;
           (await idb.db).put("dailystocks", data, name);
           console.log("fetch all daily")
         }
@@ -195,12 +224,24 @@ function splicedatadaily(data, newdata) {
 
   async function onFollowClick() {
     let val = await (await idb.db).get("followed", stockid)
+    const timestamp = + new Date();
+    await (await idb.db).put("timestamps", timestamp, 'followed');
     if (val !== undefined) {
       (await idb.db).delete("followed", stockid)
       setFollowedState(false)
+      if (!isLoading && isAuthenticated && await (await idb.db).get("settings", 'syncSettings')) {
+        let s = { symbol: stockid, timestamp: timestamp }
+        const accessToken = await getAccessTokenSilently();
+        await deleteFollowed(s, accessToken);
+      }
     } else {
       (await idb.db).put("followed", stockid, stockid);
       setFollowedState(true)
+      if (!isLoading && isAuthenticated && await (await idb.db).get("settings", 'syncSettings')) {
+        let s = { symbol: stockid, timestamp: timestamp }
+        const accessToken = await getAccessTokenSilently();
+        await postFollowed(s, accessToken);
+      }
     }
   };
 
@@ -218,7 +259,7 @@ function splicedatadaily(data, newdata) {
             <XAxis dataKey="name" />
             <YAxis domain={['dataMin', 'dataMax']} allowDataOverflow={true} />
             <Tooltip />]
-        </LineChart>
+          </LineChart>
         </ResponsiveContainer>
         <Button variant="outlined" color="primary" onClick={() => { setMonthData("3Y") }}>3 lata</Button>
         <Button variant="outlined" color="primary" onClick={() => { setMonthData("1Y") }}>rok</Button>

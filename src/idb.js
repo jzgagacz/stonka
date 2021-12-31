@@ -9,6 +9,9 @@ export const idb = {
             db.createObjectStore('compinfo');
             db.createObjectStore('intradaycrypto');
             db.createObjectStore('alerts');
+            db.createObjectStore('settings');
+            db.createObjectStore('timestamps');
+            db.createObjectStore('token');
         },
     })
 };

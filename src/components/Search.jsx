@@ -9,6 +9,10 @@ function Search() {
 
   async function onSearchClick() {
     let apidata = await getSearches(searchFieldData)
+    if (apidata == null) {
+      alert("Nie można pobrać wyników wyszukiwania")
+      return
+    }
     let newdata = apidata["bestMatches"].filter(x => x["3. type"] === "Equity")
     setData(newdata)
     console.log(newdata)

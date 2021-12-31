@@ -15,23 +15,35 @@ function CryptoId() {
     const [price, setPrice] = useState(0);
     const { getAccessTokenSilently } = useAuth0();
     let { cryptoid } = useParams();
-    const chartColor = localStorage.getItem('chartColor') === null ? "#8884d8" : localStorage.getItem('chartColor')
+    const [chartColor, setColor] = useState("#8884d8")
 
-    async function handleAlert(){
+    async function handleAlert() {
         console.log(moreless);
         console.log(price);
         const date = Date.now();
+        const timestamp = + new Date();
         console.log(date);
-        let alert = {crypto: cryptoid, moreless: moreless, price:price, date:date};
+        let alert = { crypto: cryptoid, moreless: moreless, price: price, date: date, timestamp: timestamp };
         const accessToken = await getAccessTokenSilently();
-        await postAlert(alert, accessToken);
-        //(await idb.db).put("alerts", {symbol: cryptoid, moreless: moreless, price:price, date:date}, cryptoid);
+        const res = await postAlert(alert, accessToken);
+        await (await idb.db).put("alerts", { id: res['id'], symbol: cryptoid, moreless: moreless, price: price, date: date }, res['id']);
+        await (await idb.db).put("timestamps", timestamp, 'alerts');
         setOpen(false);
     }
 
     useInterval(() => {
         getIntradayData(cryptoid);
     }, 1000 * 30);
+
+
+    useEffect(() => {
+        async function setVars() {
+            let c = await (await idb.db).get("settings", 'chartColor')
+            if (c != null)
+                setColor(c);
+        }
+        setVars();
+    }, []);
 
     useEffect(() => {
         getIntradayData(cryptoid)
@@ -50,7 +62,7 @@ function CryptoId() {
         return (minutes)
     }
 
-    
+
     async function getIntradayData(name) {
         let data = await getIntradayCryptoData(name)
         setIntradayData(data)
@@ -100,7 +112,7 @@ function CryptoId() {
                     <DialogContent>
                         <DialogContentText>
                             Ustaw alert jeśli cena zmieni się na:
-                    </DialogContentText>
+                        </DialogContentText>
                         <InputLabel></InputLabel>
                         <Select
                             value={moreless}
