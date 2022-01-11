@@ -9,7 +9,7 @@ import './App.css';
 import { Drawer, IconButton, List, Toolbar, ListItem, ListItemText, Card, CardContent, Typography, Button, Grid, Item } from '@material-ui/core';
 import { Menu } from '@material-ui/icons'
 import Logo from './logo.png'
-import { useInterval, getIntradayCryptoData, initSettingsSync } from './utils';
+import { performSettingsSync } from './utils';
 import { idb } from "./idb"
 import { postSubscribe } from './api'
 import Alerts from './components/Alerts';
@@ -22,6 +22,16 @@ function App() {
 
 
   useEffect(() => {
+    async function manualSync(){
+      const lastSync = localStorage.getItem('lastSync')
+      if (lastSync == null || lastSync < Date.now() - 3 * 60 * 60 * 1000){
+        console.log('sync')
+        await performSettingsSync()
+        localStorage.setItem('lastSync', + new Date)
+        return
+      }
+    }
+
     async function saveAccessToken() {
       if (isLoading || !isAuthenticated) {
         return
@@ -86,14 +96,20 @@ function App() {
               });
             } catch (e) {
               console.log(e);
+              manualSync();
+              return
             }
           } else {
             console.log('permission not granted')
+            manualSync();
+            return
           }
 
         }
       } else {
         console.log('periodic sync not supported')
+        manualSync();
+        return
       }
     }
 

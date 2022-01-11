@@ -6,7 +6,7 @@ async function fetchWithTimeout(url, other, time = 5000) {
     return fetch(url, { signal: controller.signal, ...other })
 }
 
-export async function getIntraday(name, outputsize) {
+export async function getIntraday(name, outputsize, timestamp) {
     try {
         const res = await fetchWithTimeout(`${BACKEND_URL}/api/stock/intraday?name=${name}&outputsize=${outputsize}&timestamp=${timestamp}`)
         return res.json()
@@ -16,7 +16,7 @@ export async function getIntraday(name, outputsize) {
     }
 }
 
-export async function getDaily(name, outputsize) {
+export async function getDaily(name, outputsize, timestamp) {
     try {
         const res = await fetchWithTimeout(`${BACKEND_URL}/api/stock/daily?name=${name}&outputsize=${outputsize}&timestamp=${timestamp}`)
         return res.json()
