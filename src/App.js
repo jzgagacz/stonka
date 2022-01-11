@@ -1,56 +1,122 @@
 import { BrowserRouter as Router, Switch, Route } from 'react-router-dom'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Stock from "./components/Stock"
 import Search from "./components/Search"
 import Followed from "./components/Followed"
 import CryptoList from "./components/CryptoList"
 import CryptoId from "./components/CryptoId"
 import './App.css';
-import { Drawer, IconButton, List, Toolbar, ListItem, ListItemText, Card, CardContent, Typography } from '@material-ui/core';
+import { Drawer, IconButton, List, Toolbar, ListItem, ListItemText, Card, CardContent, Typography, Button, Grid, Item } from '@material-ui/core';
 import { Menu } from '@material-ui/icons'
 import Logo from './logo.png'
-import { useInterval, getIntradayCryptoData } from './utils';
+import { performSettingsSync } from './utils';
 import { idb } from "./idb"
+import { postSubscribe } from './api'
 import Alerts from './components/Alerts';
+import { useAuth0 } from "@auth0/auth0-react";
+import Settings from './components/Settings';
 
 function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, isLoading, isAuthenticated, loginWithRedirect, logout, getAccessTokenSilently } = useAuth0();
 
-  async function getAlerts() {
-    if (! navigator.onLine){
-      return
-    }
-    let val = await (await idb.db).getAll("alerts")
-    console.log(val)
-    for (const a in val) {
-      console.log(val[a])
-      let data = await getIntradayCryptoData(val[a].symbol)
-      console.log(data)
-      let price = val[a].price
-      let date = val[a].date
-      if (val[a].moreless === "more") {
-        for (const t in data["Time Series Crypto (1min)"]) {
-          if (data["Time Series Crypto (1min)"][t]["4. close"] > price && Date.parse(t + "+0000") > date) {
-            alert(`Cena ${val[a].symbol} przekroczyła ${price} USD`);
-            (await idb.db).delete("alerts", val[a].symbol);
-            break;
-          }
-        }
-      } else {
-        for (const t in data["Time Series Crypto (1min)"]) {
-          if (data["Time Series Crypto (1min)"][t]["4. close"] < price && Date.parse(t + "+0000") > date) {
-            alert(`Cena ${val[a].symbol} spadła poniżej ${price} USD`);
-            (await idb.db).delete("alerts", val[a].symbol);
-            break;
-          }
-        }
+
+  useEffect(() => {
+    async function manualSync(){
+      const lastSync = localStorage.getItem('lastSync')
+      if (lastSync == null || lastSync < Date.now() - 3 * 60 * 60 * 1000){
+        console.log('sync')
+        await performSettingsSync()
+        localStorage.setItem('lastSync', + new Date)
+        return
       }
     }
-  }
 
-  useInterval(() => {
-    getAlerts();
-  }, 1000 * 10);
+    async function saveAccessToken() {
+      if (isLoading || !isAuthenticated) {
+        return
+      }
+      const tokenLastRefreshed = await (await idb.db).get('token', 'tokenLastRefreshed')
+      if (tokenLastRefreshed == null || tokenLastRefreshed < Date.now() - 3 * 60 * 60 * 1000) {
+        console.log("in")
+        const accessToken = await getAccessTokenSilently();
+        await (await idb.db).put('token', accessToken, 'accessToken');
+        const timestamp = + new Date()
+        await (await idb.db).put('token', timestamp, 'tokenLastRefreshed');
+      }
+    }
+
+    async function getSub() {
+      if (!navigator.onLine) {
+        console.log("offline")
+        return
+      }
+      if (!("serviceWorker" in navigator && "PushManager" in window)) {
+        console.log("no SW or PM")
+        return
+      }
+      if (isLoading || !isAuthenticated) {
+        return
+      }
+      const sw = await navigator.serviceWorker.ready;
+      const sub = await sw.pushManager.getSubscription();
+      if (sub === null) {
+        const newsub = await sw.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: 'BHT6CRkl2uFMHDUBDPVdQUBe24nkrvmG4AYTeUW3-aYEHAVpMvWvAKINb54lnCzXx362FfWlfG-g3Zt9Tuhlhik'
+        });
+        const accessToken = await getAccessTokenSilently();
+        const res = await postSubscribe(newsub, accessToken);
+      }
+    }
+    async function settingsSync() {
+      if (isLoading || !isAuthenticated) {
+        return
+      }
+      if (!"serviceWorker" in navigator) {
+        console.log("no SW")
+        return
+      }
+      if (!await (await idb.db).get("settings", 'syncSettings')){
+        return
+      }
+      const registration = await navigator.serviceWorker.ready;
+      if ('periodicSync' in registration) {
+        const tags = await registration.periodicSync.getTags();
+        console.log(tags)
+        if (!tags.includes('sync-settings')) {
+          const status = await navigator.permissions.query({
+            name: 'periodic-background-sync',
+          });
+          console.log(status)
+          if (status.state === 'granted') {
+            try {
+              await registration.periodicSync.register('sync-settings', {
+                minInterval: 3 * 60 * 60 * 1000,
+              });
+            } catch (e) {
+              console.log(e);
+              manualSync();
+              return
+            }
+          } else {
+            console.log('permission not granted')
+            manualSync();
+            return
+          }
+
+        }
+      } else {
+        console.log('periodic sync not supported')
+        manualSync();
+        return
+      }
+    }
+
+    saveAccessToken()
+    getSub()
+    settingsSync()
+  }, [isLoading, isAuthenticated])
 
   function ListItemLink(props) {
     return <ListItem button component="a" {...props} />;
@@ -59,32 +125,64 @@ function App() {
   return (
     <div className="App">
       <Toolbar>
-        <IconButton onClick={() => setDrawerOpen(true)}><Menu /></IconButton>
-        <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-          <List>
-            <ListItemLink href="/">
-              <ListItemText primary="SZUKAJ" />
-            </ListItemLink>
-            <ListItemLink href="/followed">
-              <ListItemText primary="OBSERWOWANE" />
-            </ListItemLink>
-            <ListItemLink href="/crypto">
-              <ListItemText primary="KRYPTOWALUTY" />
-            </ListItemLink>
-            <ListItemLink href="/alerts">
-              <ListItemText primary="ALERTY CENOWE" />
-            </ListItemLink>
-          </List>
-        </Drawer>
-        <img src={Logo} alt="" height={64} />
-        <h2>stonka</h2>
+        <Grid justify="space-between" container spacing={3} alignItems="center">
+          <Grid item>
+            <div>
+              <IconButton onClick={() => setDrawerOpen(true)}><Menu /></IconButton>
+              <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+                <List>
+                  <ListItemLink href="/">
+                    <ListItemText primary="SZUKAJ" />
+                  </ListItemLink>
+                  <ListItemLink href="/followed">
+                    <ListItemText primary="OBSERWOWANE" />
+                  </ListItemLink>
+                  <ListItemLink href="/crypto">
+                    <ListItemText primary="KRYPTOWALUTY" />
+                  </ListItemLink>
+                  <ListItemLink href="/alerts">
+                    <ListItemText primary="ALERTY CENOWE" />
+                  </ListItemLink>
+                  <ListItemLink href="/settings">
+                    <ListItemText primary="USTAWIENIA" />
+                  </ListItemLink>
+                </List>
+              </Drawer>
+            </div>
+          </Grid>
+
+          <Grid item>
+            <Grid container direction="row" alignItems="center">
+              <Grid item>
+                <img src={Logo} alt="" height={64} />
+              </Grid>
+              <Grid item>
+                <h2>stonka</h2>
+              </Grid>
+            </Grid>
+          </Grid>
+          <Grid item>
+            <div>
+              {isLoading ? <div></div> : (isAuthenticated ?
+                <div>
+                  {user.name}
+                  <Button onClick={() => logout({ returnTo: window.location.origin })}>
+                    Wyloguj się
+                  </Button>
+                </div> :
+                <div>
+                  <Button onClick={() => loginWithRedirect()}>Zaloguj się</Button>
+                </div>)}
+            </div>
+          </Grid>
+        </Grid>
       </Toolbar>
       {navigator.onLine ? <div></div> :
         <Card>
           <CardContent style={{ backgroundColor: "pink" }}>
             <Typography variant="h5" component="span">
               Brak połączenia z internetem
-          </Typography>
+            </Typography>
           </CardContent>
         </Card>
       }
@@ -96,6 +194,7 @@ function App() {
           <Route exact path="/crypto" component={CryptoList} />
           <Route path="/crypto/:cryptoid" component={CryptoId} />
           <Route path="/alerts" component={Alerts} />
+          <Route path="/settings" component={Settings} />
         </Switch>
       </Router>
     </div>

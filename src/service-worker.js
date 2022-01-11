@@ -12,6 +12,9 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { StaleWhileRevalidate } from 'workbox-strategies';
+import Logo from './logo.png'
+import { performSettingsSync } from './utils';
+importScripts("https://cdn.jsdelivr.net/npm/idb@6.1.2/build/iife/with-async-ittr-min.js");
 
 clientsClaim();
 
@@ -70,3 +73,20 @@ self.addEventListener('message', (event) => {
 });
 
 // Any other custom service worker logic can go here.
+
+self.addEventListener("push", e => {
+  const data = e.data.json();
+  self.registration.showNotification(
+    data.title,
+    {
+      body: data.body,
+      icon: Logo
+    }
+  );
+});
+
+self.addEventListener('periodicsync', (e) => {
+  if (e.tag === 'sync-settings') {
+    e.waitUntil(performSettingsSync());
+  }
+});

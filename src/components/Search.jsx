@@ -3,12 +3,16 @@ import React, { useState } from 'react';
 import { getSearches } from "../api"
 
 
-function Stock() {
+function Search() {
   const [searchFieldData, setSearchFieldData] = useState();
   const [data, setData] = useState([]);
 
   async function onSearchClick() {
     let apidata = await getSearches(searchFieldData)
+    if (apidata == null) {
+      alert("Nie można pobrać wyników wyszukiwania")
+      return
+    }
     let newdata = apidata["bestMatches"].filter(x => x["3. type"] === "Equity")
     setData(newdata)
     console.log(newdata)
@@ -32,4 +36,4 @@ function Stock() {
   );
 }
 
-export default Stock;
+export default Search;

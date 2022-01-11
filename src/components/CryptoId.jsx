@@ -4,6 +4,8 @@ import { Dialog, DialogTitle, DialogContent, DialogContentText, InputLabel, Sele
 import { useParams } from 'react-router';
 import { idb } from "../idb"
 import { useInterval, getIntradayCryptoData } from '../utils';
+import { postAlert } from '../api';
+import { useAuth0 } from "@auth0/auth0-react";
 
 function CryptoId() {
     const [data, setData] = useState();
@@ -11,20 +13,37 @@ function CryptoId() {
     const [open, setOpen] = useState(false);
     const [moreless, setMoreLess] = useState("more");
     const [price, setPrice] = useState(0);
+    const { getAccessTokenSilently } = useAuth0();
     let { cryptoid } = useParams();
+    const [chartColor, setColor] = useState("#8884d8")
 
-    async function handleAlert(){
+    async function handleAlert() {
         console.log(moreless);
         console.log(price);
         const date = Date.now();
+        const timestamp = + new Date();
         console.log(date);
-        (await idb.db).put("alerts", {symbol: cryptoid, moreless: moreless, price:price, date:date}, cryptoid);
+        let alert = { crypto: cryptoid, moreless: moreless, price: price, date: date, timestamp: timestamp };
+        const accessToken = await getAccessTokenSilently();
+        const res = await postAlert(alert, accessToken);
+        await (await idb.db).put("alerts", { id: res['id'], symbol: cryptoid, moreless: moreless, price: price, date: date }, res['id']);
+        await (await idb.db).put("timestamps", timestamp, 'alerts');
         setOpen(false);
     }
 
     useInterval(() => {
         getIntradayData(cryptoid);
     }, 1000 * 30);
+
+
+    useEffect(() => {
+        async function setVars() {
+            let c = await (await idb.db).get("settings", 'chartColor')
+            if (c != null)
+                setColor(c);
+        }
+        setVars();
+    }, []);
 
     useEffect(() => {
         getIntradayData(cryptoid)
@@ -43,7 +62,7 @@ function CryptoId() {
         return (minutes)
     }
 
-    
+
     async function getIntradayData(name) {
         let data = await getIntradayCryptoData(name)
         setIntradayData(data)
@@ -80,7 +99,7 @@ function CryptoId() {
                 <h2>{cryptoid}(USD)</h2>
                 <ResponsiveContainer width="90%" height={400}>
                     <LineChart data={data}>
-                        <Line type="linear" dataKey="value" stroke="#8884d8" dot={false} />
+                        <Line type="linear" dataKey="value" stroke={chartColor} dot={false} />
                         <CartesianGrid stroke="#ccc" strokeDasharray="5 5" />
                         <XAxis dataKey="name" />
                         <YAxis domain={['dataMin', 'dataMax']} allowDataOverflow={true} />
@@ -93,7 +112,7 @@ function CryptoId() {
                     <DialogContent>
                         <DialogContentText>
                             Ustaw alert jeśli cena zmieni się na:
-                    </DialogContentText>
+                        </DialogContentText>
                         <InputLabel></InputLabel>
                         <Select
                             value={moreless}
