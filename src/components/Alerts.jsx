@@ -35,6 +35,7 @@ function Alerts() {
 
     return (
         <div>
+            <h2>Alerty cenowe:</h2>
             <List>
                 {data.map((e, idx) => (
                     <ListItem key={idx} >

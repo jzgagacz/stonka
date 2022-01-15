@@ -21,6 +21,7 @@ function Followed() {
 
     return (
         <div>
+            <h2>Obserwowane:</h2>
             <List>
                 {data.map((e, idx) => (
                     <ListItemLink key={idx} href={`/stock/${e}`} info={e}>

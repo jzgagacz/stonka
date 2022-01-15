@@ -11,6 +11,7 @@ function CryptoList() {
 
   return (
     <div>
+      <h2>Kryptowaluty:</h2>
       <List>
         {cryptolist.map((e, idx) => (
           <ListItemLink key={idx} href={`/crypto/${e}`}>
