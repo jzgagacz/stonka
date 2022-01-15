@@ -57,16 +57,21 @@ export async function getIntradayCrypto(name, outputsize, timestamp) {
 }
 
 export async function postSubscribe(sub, accessToken) {
-    const res = await fetch(`${BACKEND_URL}/api/subscribe`, {
-        method: 'POST',
-        headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify(sub)
-    })
-    return res.json()
+    try {
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/subscribe`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify(sub)
+        })
+        return res.json()
+    } catch (e) {
+        console.log(e)
+        return null
+    }
 }
 
 export async function postAllFollowed(followed, accessToken) {

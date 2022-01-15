@@ -13,7 +13,7 @@ function CryptoId() {
     const [open, setOpen] = useState(false);
     const [moreless, setMoreLess] = useState("more");
     const [price, setPrice] = useState(0);
-    const { getAccessTokenSilently } = useAuth0();
+    const { getAccessTokenSilently, isLoading, isAuthenticated } = useAuth0();
     let { cryptoid } = useParams();
     const [chartColor, setColor] = useState("#8884d8")
 
@@ -106,7 +106,9 @@ function CryptoId() {
                         <Tooltip />]
                     </LineChart>
                 </ResponsiveContainer>
+                {!isLoading && isAuthenticated ? <div> 
                 <Button variant="contained" color="primary" onClick={() => setOpen(true)}>Ustaw alert</Button>
+                </div> : <div></div>}
                 <Dialog open={open} onClose={() => setOpen(false)}>
                     <DialogTitle>Ustaw alert</DialogTitle>
                     <DialogContent>

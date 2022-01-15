@@ -67,6 +67,9 @@ function App() {
         });
         const accessToken = await getAccessTokenSilently();
         const res = await postSubscribe(newsub, accessToken);
+        if (res == null){
+          newsub.unsubscribe();
+        }
       }
     }
     async function settingsSync() {
