@@ -69,6 +69,7 @@ function App() {
         const res = await postSubscribe(newsub, accessToken);
         if (res == null){
           newsub.unsubscribe();
+          console.log("unsubscribing")
         }
       }
     }
