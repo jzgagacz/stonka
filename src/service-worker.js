@@ -13,7 +13,7 @@ import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { StaleWhileRevalidate } from 'workbox-strategies';
 import Logo from './logo.png'
-import { performSettingsSync } from './utils';
+import { performSettingsSync, deleteAlert } from './utils';
 importScripts("https://cdn.jsdelivr.net/npm/idb@6.1.2/build/iife/with-async-ittr-min.js");
 
 clientsClaim();
@@ -74,7 +74,7 @@ self.addEventListener('message', (event) => {
 
 // Any other custom service worker logic can go here.
 
-self.addEventListener("push", e => {
+self.addEventListener("push", async (e) => {
   const data = e.data.json();
   self.registration.showNotification(
     data.title,
@@ -83,6 +83,7 @@ self.addEventListener("push", e => {
       icon: Logo
     }
   );
+  await deleteAlert(data.alertid)
 });
 
 self.addEventListener('periodicsync', (e) => {

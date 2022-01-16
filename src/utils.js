@@ -82,13 +82,19 @@ export async function getIntradayCryptoData(name) {
   return data
 }
 
+export async function deleteAlert(alertid){
+  let db = await idb.db
+  if (db == null) {
+    db = idb.open('db')
+  }
+  await db.delete("alerts", alertid);
+}
 
 export async function performSettingsSync() {
   let db = await idb.db
   if (db == null) {
     db = idb.open('db')
   }
-  console.log(db)
   const accessToken = await db.get('token', 'accessToken')
   if (!await (db.get('settings', 'syncSettings'))) {
     return
